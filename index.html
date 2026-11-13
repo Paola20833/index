@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de Datos – Primera y Segunda Entrega</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #0b0d12; }
+    .hud { position: fixed; z-index: 10; top: 14px; left: 14px; width: min(340px, calc(100vw - 28px)); padding: 15px 17px; background: rgba(5, 19, 32, .91); color: #fff; border: 1px solid #5fe9ff70; border-radius: 12px; box-shadow: 0 8px 30px #0008; }
+    .hud h1 { font-size: 17px; margin: 0 0 7px; }
+    .hud p { margin: 4px 0; font-size: 12px; line-height: 1.5; color: #d1e4ef; }
+    .hud button, .modal button { background: #22bfd3; color: #031923; border: 0; border-radius: 6px; padding: 8px 12px; font-weight: 700; cursor: pointer; margin-top: 9px; }
+    .status { color: #7ff2be; }
+    .modal { display: none; position: fixed; z-index: 15; inset: 0; overflow: auto; padding: 30px 15px; background: rgba(0, 0, 0, .88); color: #fff; }
+    .modal.open { display: block; }
+    .modal-inner { max-width: 900px; margin: auto; }
+    .modal h2 { margin: 0 0 8px; }
+    .story-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 17px; }
+    .story { padding: 16px; background: #122737; border: 1px solid #3d6174; border-radius: 10px; min-height: 160px; }
+    .story .num { display: inline-block; background: #145263; padding: 5px 9px; border-radius: 99px; font-size: 11px; }
+    .story h3 { font-size: 16px; margin: 13px 0 8px; }
+    .story p { font-size: 13px; line-height: 1.55; color: #e1ebf3; }
+    @media(max-width: 550px){ .hud { padding: 10px; } .hud h1 { font-size: 14px; } .hud p { font-size: 11px; } }
+  </style>
+  <script>
+    // Componente personalizado de rack: base de la Clase 1.
+    // Se conserva y reutiliza en la ampliación de la Clase 2.
+    AFRAME.registerComponent('rack', {
+      schema: {
+        unidades: { type: 'int', default: 8 },
+        estado: { type: 'string', default: 'ok' },
+        numero: { type: 'string', default: '01' },
+        servicio: { type: 'string', default: 'SERVIDOR' }
+      },
+      init: function () {
+        const data = this.data;
+        const falla = data.estado.toLowerCase() === 'falla';
+        const el = this.el;
+        const add = (tag, attrs) => {
+          const node = document.createElement(tag);
+          Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+          el.appendChild(node);
+          return node;
+        };
+        add('a-box', { position: '0 1.08 0', width: 1.1, height: 2.16, depth: 1.05, color: '#101b28', material: 'roughness: 0.75' });
+        add('a-box', { position: '0 1.08 0.535', width: 0.97, height: 2.00, depth: 0.025, color: '#2c4052' });
+        add('a-box', { position: '0 2.18 0', width: 1.13, height: 0.08, depth: 1.1, color: '#5c7389' });
+        add('a-box', { position: '0 0.08 0', width: 1.13, height: 0.16, depth: 1.1, color: '#5c7389' });
+        for (let i = 0; i < Math.min(12, Math.max(1, data.unidades)); i++) {
+          const y = 0.32 + i * 0.205;
+          add('a-box', { position: `0 ${y} 0.57`, width: 0.82, height: 0.158, depth: 0.046, color: '#152535' });
+          add('a-box', { position: `-0.30 ${y} 0.603`, width: 0.12, height: 0.045, depth: 0.01, color: '#708ba0' });
+          add('a-sphere', { position: `0.32 ${y} 0.605`, radius: 0.024, color: falla && i === 3 ? '#ff334c' : '#2df1a7',
+            material: falla && i === 3 ? 'emissive: #ff334c; emissiveIntensity: 0.9' : 'emissive: #2df1a7; emissiveIntensity: 0.4' });
+        }
+        add('a-box', { position: '0 1.96 0.6', width: 0.88, height: 0.20, depth: 0.016, color: falla ? '#782436' : '#194b49' });
+        add('a-text', { value: `RACK ${data.numero}`, position: '0 1.99 0.621', align: 'center', color: '#ffffff', width: 1.65 });
+        add('a-text', { value: falla ? 'FALLA' : 'ACTIVO', position: '0 1.82 0.622', align: 'center', color: falla ? '#ff5269' : '#61ffd4', width: 1.3 });
+        add('a-text', { value: data.servicio, position: '0 0.16 0.62', align: 'center', color: '#dce9f3', width: 1.2 });
+      }
+    });
+    function toggleStoryboard(show) {
+      const modal = document.getElementById('storyboard');
+      modal.classList.toggle('open', show);
+      modal.setAttribute('aria-hidden', String(!show));
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleStoryboard(false); });
+  </script>
+</head>
+<body>
+  <div class="hud">
+    <h1>CENTRO DE DATOS – GRUPO 1</h1>
+    <p><strong>Primera + segunda entrega</strong> | Recorrido VR en A-Frame</p>
+    <p>Explorar: <strong>W A S D</strong> para desplazarte y <strong>mouse</strong> para mirar.</p>
+    <p><span class="status">●</span> Racks activos: 7/8 &nbsp; | &nbsp; <span style="color:#ff7b87">●</span> Rack 04: FALLA</p>
+    <button type="button" onclick="toggleStoryboard(true)">Ver storyboard (Clase 1)</button>
+  </div>
+
+  <div id="storyboard" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Storyboard de seis escenas">
+    <div class="modal-inner">
+      <h2>Storyboard: recorrido del centro de datos</h2>
+      <p>Seis momentos de la experiencia del visitante (primera entrega).</p>
+      <button type="button" onclick="toggleStoryboard(false)">Cerrar y regresar a la sala</button>
+      <div class="story-grid">
+        <div class="story"><span class="num">01</span><h3>Entrada</h3><p><strong>Ve:</strong> puerta y letrero de acceso.<br><strong>Hace:</strong> comienza la visita.<br><strong>Cambia:</strong> descubre la sala al avanzar.</p></div>
+        <div class="story"><span class="num">02</span><h3>Primer pasillo</h3><p><strong>Ve:</strong> piso técnico y dos filas de racks.<br><strong>Hace:</strong> camina con W/A/S/D.<br><strong>Cambia:</strong> se acerca a los dispositivos.</p></div>
+        <div class="story"><span class="num">03</span><h3>Rack activo</h3><p><strong>Ve:</strong> módulos y luces verdes.<br><strong>Hace:</strong> observa el Rack 01.<br><strong>Cambia:</strong> reconoce que está activo.</p></div>
+        <div class="story"><span class="num">04</span><h3>Rack con falla</h3><p><strong>Ve:</strong> luz roja y texto FALLA.<br><strong>Hace:</strong> localiza el Rack 04.<br><strong>Cambia:</strong> identifica el equipo averiado.</p></div>
+        <div class="story"><span class="num">05</span><h3>Panel informativo</h3><p><strong>Ve:</strong> cartel con cantidad y estados de racks.<br><strong>Hace:</strong> lee la información.<br><strong>Cambia:</strong> comprende el estado general simulado.</p></div>
+        <div class="story"><span class="num">06</span><h3>Salida</h3><p><strong>Ve:</strong> puerta y señal de salida.<br><strong>Hace:</strong> regresa al acceso.<br><strong>Cambia:</strong> concluye el recorrido.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <a-scene background="color: #0b0d12" renderer="antialias: true; colorManagement: true">
+    <!-- CLASE 1: sala base, colores editados y visitante -->
+    <a-plane position="0 0 -4" rotation="-90 0 0" width="8" height="12" color="#415b70"></a-plane>
+    <a-plane position="0 3.5 -4" rotation="90 0 0" width="8" height="12" color="#253444" material="side: double"></a-plane>
+    <a-box position="-4 1.75 -4" width="0.12" height="3.5" depth="12" color="#24384b"></a-box>
+    <a-box position="4 1.75 -4" width="0.12" height="3.5" depth="12" color="#24384b"></a-box>
+    <a-box position="0 1.75 -10" width="8" height="3.5" depth="0.12" color="#24384b"></a-box>
+    <!-- Pared frontal con espacio central de acceso -->
+    <a-box position="-2.3 1.75 2" width="3.4" height="3.5" depth="0.12" color="#24384b"></a-box>
+    <a-box position="2.3 1.75 2" width="3.4" height="3.5" depth="0.12" color="#24384b"></a-box>
+    <a-box position="0 2.8 2" width="1.2" height="1.4" depth="0.12" color="#24384b"></a-box>
+    <a-text value="CENTRO DE DATOS - GRUPO 1" position="0 3.13 -9.87" align="center" width="6" color="#ffffff"></a-text>
+    <a-text value="PASILLO FRIO" position="0 2.70 -3.8" align="center" width="3.4" color="#b9f6ff"></a-text>
+
+    <!-- CLASE 2: 8 racks con las caras orientadas hacia el pasillo central -->
+    <!-- PASILLO FRÍO: fila izquierda -->
+    <a-entity rack="unidades: 8; estado: ok; numero: 01; servicio: WEB" position="-1.6 0 -3" rotation="0 90 0"></a-entity>
+    <a-entity rack="unidades: 8; estado: ok; numero: 02; servicio: BASE DE DATOS" position="-1.6 0 -4.5" rotation="0 90 0"></a-entity>
+    <a-entity rack="unidades: 8; estado: ok; numero: 03; servicio: ALMACENAMIENTO" position="-1.6 0 -6" rotation="0 90 0"></a-entity>
+    <a-entity rack="unidades: 8; estado: ok; numero: 05; servicio: RESPALDOS" position="-1.6 0 -7.5" rotation="0 90 0"></a-entity>
+    <!-- PASILLO FRÍO: fila derecha -->
+    <a-entity rack="unidades: 8; estado: ok; numero: 06; servicio: RED" position="1.6 0 -3" rotation="0 -90 0"></a-entity>
+    <a-entity rack="unidades: 8; estado: falla; numero: 04; servicio: MONITOREO" position="1.6 0 -4.5" rotation="0 -90 0"></a-entity>
+    <a-entity rack="unidades: 8; estado: ok; numero: 07; servicio: APLICACIONES" position="1.6 0 -6" rotation="0 -90 0"></a-entity>
+    <a-entity rack="unidades: 8; estado: ok; numero: 08; servicio: VIRTUALIZACION" position="1.6 0 -7.5" rotation="0 -90 0"></a-entity>
+
+    <!-- CLASE 2: puerta de acceso (visual, no interactiva) -->
+    <a-box position="0 1 1.88" width="1.2" height="2" depth="0.06" color="#8a5a2b"></a-box>
+    <a-sphere position="0.43 1 1.81" radius="0.055" color="#f5c542"></a-sphere>
+    <a-text value="ACCESO AL CENTRO DE DATOS" position="0 2.35 1.78" rotation="0 180 0" align="center" width="3" color="#ffffff" material="side: double"></a-text>
+    <a-text value="SALIDA" position="0 0.035 0.5" rotation="-90 0 0" align="center" width="1.8" color="#ffe166"></a-text>
+
+    <!-- CLASE 2: equipo CRAC -->
+    <a-box position="-3 0.9 -9.2" width="1.2" height="1.8" depth="0.8" color="#9aa3b5"></a-box>
+    <a-box position="-3 1.35 -8.79" width="0.9" height="0.3" depth="0.02" color="#263849"></a-box>
+    <a-box position="-3 0.65 -8.79" width="0.95" height="0.6" depth="0.02" color="#526272"></a-box>
+    <a-text value="CRAC - CLIMATIZACION" position="-3 2 -8.75" align="center" width="2.3" color="#00e5ff"></a-text>
+
+    <!-- CLASE 2: piso técnico cuadriculado de 1 x 1 m -->
+    <a-box position="-3 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="-2 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="-1 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="1 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="2 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="3 0.012 -4" width="0.012" height="0.012" depth="12" color="#9aabba"></a-box>
+    <a-box position="0 0.012 1" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 0" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -1" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -2" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -3" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -4" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -5" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -6" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -7" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -8" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+    <a-box position="0 0.012 -9" width="8" height="0.012" depth="0.012" color="#9aabba"></a-box>
+
+    <!-- Panel de identificación (informativo, valores simulados) -->
+    <a-plane position="3.88 1.7 -4" rotation="0 -90 0" width="2.65" height="1.4" color="#102a39"></a-plane>
+    <a-text value="INVENTARIO SIMULADO\n8 RACKS / 7 ACTIVOS\nRACK 04: FALLA\nCRAC: INSTALADO" position="3.83 1.93 -4" rotation="0 -90 0" width="2.45" color="#ffffff" align="center"></a-text>
+    <a-plane position="-3.87 1.7 -4" rotation="0 90 0" width="2.65" height="1.4" color="#102a39"></a-plane>
+    <a-text value="SALA VR\nPRIMERA + SEGUNDA ENTREGA\nPISO TECNICO\nPASILLO FRIO" position="-3.82 1.93 -4" rotation="0 90 0" width="2.45" color="#ffffff" align="center"></a-text>
+
+    <!-- Iluminación -->
+    <a-light type="ambient" color="#d9ecff" intensity="0.65"></a-light>
+    <a-light type="point" position="0 3 -3" color="#d8f3ff" intensity="0.85" distance="12"></a-light>
+    <a-light type="point" position="0 3 -8" color="#d8f3ff" intensity="0.65" distance="10"></a-light>
+    <a-box position="0 3.44 -3.3" width="1.5" height="0.04" depth="0.35" color="#d7f5ff" material="emissive: #c7f5ff; emissiveIntensity: 0.35"></a-box>
+    <a-box position="0 3.44 -7.0" width="1.5" height="0.04" depth="0.35" color="#d7f5ff" material="emissive: #c7f5ff; emissiveIntensity: 0.35"></a-box>
+
+    <!-- VISITANTE -->
+    <a-entity position="0 0 0.5">
+      <a-camera position="0 1.6 0" wasd-controls="acceleration: 22" look-controls></a-camera>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
